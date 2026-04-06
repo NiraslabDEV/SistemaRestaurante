@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Restaurant {
+  id        String    @id @default(cuid())
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  users     User[]
+  tables    Table[]
+  products  Product[]
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String     @db.VarChar(100)
+  email        String?    @unique @db.VarChar(255)
+  password     String?    // hash bcrypt — apenas OWNER
+  pin          String?    // hash bcrypt — WAITER, KITCHEN, BAR
+  role         Role
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orders       Order[]    @relation("waiterOrders")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([restaurantId])
+  @@index([email])
+}
+
+enum Role {
+  WAITER
+  KITCHEN
+  BAR
+  OWNER
+}
+
+model Table {
+  id           String     @id @default(cuid())
+  number       Int
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orders       Order[]
+  createdAt    DateTime   @default(now())
+
+  @@unique([restaurantId, number])
+  @@index([restaurantId])
+}
+
+model Product {
+  id           String      @id @default(cuid())
+  name         String      @db.VarChar(100)
+  price        Float
+  category     Category
+  available    Boolean     @default(true)
+  allergens    String[]
+  isBrindeOnly Boolean     @default(false)
+  restaurantId String
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orderItems   OrderItem[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([restaurantId])
+  @@index([restaurantId, category])
+}
+
+enum Category {
+  FOOD
+  DRINK
+  DESSERT
+}
+
+model Order {
+  id            String         @id @default(cuid())
+  tableId       String
+  table         Table          @relation(fields: [tableId], references: [id])
+  waiterId      String
+  waiter        User           @relation("waiterOrders", fields: [waiterId], references: [id])
+  status        OrderStatus    @default(OPEN)
+  isPostClosed  Boolean        @default(false)
+  closedAt      DateTime?
+  total         Float          @default(0)
+  items         OrderItem[]
+  splitPayments SplitPayment[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([tableId])
+  @@index([waiterId])
+  @@index([status])
+}
+
+enum OrderStatus {
+  OPEN
+  SENT_TO_KITCHEN
+  SENT_TO_BAR
+  PARTIALLY_READY
+  COMPLETED
+  CLOSED
+}
+
+model OrderItem {
+  id           String      @id @default(cuid())
+  orderId      String
+  order        Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product     @relation(fields: [productId], references: [id])
+  quantity     Int
+  observation  String?     @db.VarChar(500)
+  isBrinde     Boolean     @default(false)
+  allergyAlert String?     @db.VarChar(500)
+  status       ItemStatus  @default(PENDING)
+  destination  Destination
+  readyAt      DateTime?
+  deliveredAt  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([orderId])
+  @@index([status, destination])
+}
+
+enum ItemStatus {
+  PENDING
+  IN_PROGRESS
+  READY
+  DELIVERED
+}
+
+enum Destination {
+  KITCHEN
+  BAR
+}
+
+model SplitPayment {
+  id        String    @id @default(cuid())
+  orderId   String
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  guestName String?   @db.VarChar(100)
+  amount    Float
+  paid      Boolean   @default(false)
+  paidAt    DateTime?
+
+  @@index([orderId])
+}

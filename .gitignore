@@ -1,0 +1,42 @@
+# Dependências
+node_modules/
+.dart_tool/
+.pub-cache/
+
+# Build
+dist/
+build/
+*.js.map
+
+# Ambiente — NUNCA commitar .env com valores reais
+.env
+.env.local
+.env.*.local
+
+# Prisma
+backend/src/db/prisma/migrations/
+
+# Logs
+*.log
+logs/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testes
+coverage/
+.jest-cache/
+
+# Flutter
+**/android/
+**/ios/
+**/linux/
+**/macos/
+**/windows/
+**/web/
